@@ -35,13 +35,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _firstDay = DateTime.now().subtract(const Duration(days: 365));
     _lastDay = DateTime.now().add(const Duration(days: 365));
     
-    // Load categories on app start
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TransactionProvider>().loadCategories();
+    // Load categories and data after widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        // First load categories
+        await context.read<TransactionProvider>().loadCategories();
+        
+        // Then load transaction data
+        await _loadMonthData(_focusedDay);
+        await _loadDayTransactions(_selectedDay);
+      } catch (e) {
+        print('Error during initial data load: $e');
+      }
     });
-    
-    _loadMonthData(_focusedDay);
-    _loadDayTransactions(_selectedDay);
   }
 
   DateTime _normalizeDate(DateTime date) {
@@ -101,9 +107,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       });
     } catch (e) {
       setState(() => _isLoadingMonth = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('데이터 로드 실패: ${e.toString()}')),
-      );
+      print('Error loading month data: $e');
     }
   }
 
@@ -120,9 +124,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       });
     } catch (e) {
       setState(() => _isLoadingDay = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('거래 로드 실패: ${e.toString()}')),
-      );
+      print('Error loading day transactions: $e');
     }
   }
 
@@ -192,21 +194,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       appBar: AppBar(
         title: const Text('캘린더'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final authProvider = context.read<AuthProvider>();
-              try {
-                await authProvider.signOut();
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('로그아웃 실패: $e')),
-                  );
-                }
-              }
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () async {

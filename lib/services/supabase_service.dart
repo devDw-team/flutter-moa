@@ -68,35 +68,69 @@ class SupabaseService {
   }
   
   Future<List<Map<String, dynamic>>> getMonthlyTransactions(DateTime month) async {
-    final userId = currentUser?.id;
-    if (userId == null) throw Exception('User not authenticated');
-    final startDate = DateTime(month.year, month.month, 1);
-    final endDate = DateTime(month.year, month.month + 1, 0);
-    
-    final response = await supabase
-        .from('transactions')
-        .select('*, categories!inner(*)')
-        .eq('user_id', userId)
-        .gte('transaction_date', startDate.toIso8601String().split('T')[0])
-        .lte('transaction_date', endDate.toIso8601String().split('T')[0])
-        .order('transaction_date', ascending: false);
-    
-    return List<Map<String, dynamic>>.from(response as List);
+    try {
+      final userId = currentUser?.id;
+      if (userId == null) {
+        print('User not authenticated in getMonthlyTransactions');
+        return [];
+      }
+      
+      final startDate = DateTime(month.year, month.month, 1);
+      final endDate = DateTime(month.year, month.month + 1, 0);
+      
+      final response = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('transaction_date', startDate.toIso8601String().split('T')[0])
+          .lte('transaction_date', endDate.toIso8601String().split('T')[0])
+          .order('transaction_date', ascending: false);
+      
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      print('Error in getMonthlyTransactions: $e');
+      return [];
+    }
   }
   
   Future<List<Map<String, dynamic>>> getTransactionsByDate(DateTime date) async {
-    final userId = currentUser?.id;
-    if (userId == null) throw Exception('User not authenticated');
-    final dateStr = date.toIso8601String().split('T')[0];
-    
-    final response = await supabase
-        .from('transactions')
-        .select('*, categories!inner(*)')
-        .eq('user_id', userId)
-        .eq('transaction_date', dateStr)
-        .order('created_at', ascending: false);
-    
-    return List<Map<String, dynamic>>.from(response as List);
+    try {
+      final userId = currentUser?.id;
+      if (userId == null) {
+        print('User not authenticated in getTransactionsByDate');
+        return [];
+      }
+      
+      final dateStr = date.toIso8601String().split('T')[0];
+      
+      // Get transactions without joining categories to avoid RLS infinite recursion
+      final transactions = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('transaction_date', dateStr)
+          .order('created_at', ascending: false);
+      
+      // Get all user's categories once
+      final categories = await getCategories();
+      final categoryMap = Map.fromEntries(
+        categories.map((c) => MapEntry(c['id'], c))
+      );
+      
+      // Map categories to transactions
+      final transactionsWithCategories = transactions.map((transaction) {
+        final categoryId = transaction['category_id'];
+        if (categoryId != null && categoryMap.containsKey(categoryId)) {
+          transaction['categories'] = categoryMap[categoryId];
+        }
+        return transaction;
+      }).toList();
+      
+      return List<Map<String, dynamic>>.from(transactionsWithCategories);
+    } catch (e) {
+      print('Error in getTransactionsByDate: $e');
+      return [];
+    }
   }
   
   Future<void> deleteTransaction(String transactionId) async {
@@ -287,8 +321,8 @@ class SupabaseService {
     String? icon,
     String? color,
   }) async {
-    // TODO: Implement proper auth check
-    final userId = 'test-user-id';
+    final userId = currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
     
     await supabase.from('categories').insert({
       'user_id': userId,
@@ -301,8 +335,8 @@ class SupabaseService {
   
   // Realtime subscription
   RealtimeChannel subscribeToTransactions(Function(dynamic) onUpdate) {
-    // TODO: Implement proper auth check
-    final userId = 'test-user-id';
+    final userId = currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
     
     return supabase
         .channel('transactions:$userId')
@@ -324,31 +358,144 @@ class SupabaseService {
   
   // Monthly Summary
   Future<Map<String, double>> getMonthlySummary(DateTime month) async {
-    // TODO: Implement proper auth check
-    final userId = 'test-user-id';
-    final monthStr = '${month.year}-${month.month.toString().padLeft(2, '0')}';
-    
-    final response = await supabase
-        .from('monthly_summary')
-        .select()
-        .eq('user_id', userId)
-        .ilike('month', '$monthStr%');
-    
-    double totalIncome = 0;
-    double totalExpense = 0;
-    
-    for (final row in response as List) {
-      if (row['type'] == 'income') {
-        totalIncome = (row['total_amount'] ?? 0).toDouble();
-      } else if (row['type'] == 'expense') {
-        totalExpense = (row['total_amount'] ?? 0).toDouble();
+    try {
+      final userId = currentUser?.id;
+      if (userId == null) {
+        print('User not authenticated in getMonthlySummary');
+        return {
+          'income': 0,
+          'expense': 0,
+          'balance': 0,
+        };
       }
+      
+      final startDate = DateTime(month.year, month.month, 1);
+      final endDate = DateTime(month.year, month.month + 1, 0);
+      
+      // Get all transactions for the month
+      final transactions = await supabase
+          .from('transactions')
+          .select('amount, type')
+          .eq('user_id', userId)
+          .gte('transaction_date', startDate.toIso8601String().split('T')[0])
+          .lte('transaction_date', endDate.toIso8601String().split('T')[0]);
+      
+      double totalIncome = 0;
+      double totalExpense = 0;
+      
+      for (final transaction in transactions) {
+        final amount = (transaction['amount'] as num).toDouble();
+        final type = transaction['type'] as String;
+        
+        if (type == 'income') {
+          totalIncome += amount;
+        } else if (type == 'expense') {
+          totalExpense += amount;
+        }
+      }
+      
+      return {
+        'income': totalIncome,
+        'expense': totalExpense,
+        'balance': totalIncome - totalExpense,
+      };
+    } catch (e) {
+      print('Error in getMonthlySummary: $e');
+      return {
+        'income': 0,
+        'expense': 0,
+        'balance': 0,
+      };
     }
-    
-    return {
-      'income': totalIncome,
-      'expense': totalExpense,
-      'balance': totalIncome - totalExpense,
-    };
+  }
+  
+  // Budget Methods
+  Future<Map<String, dynamic>?> getCurrentMonthBudget() async {
+    try {
+      final userId = currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+      
+      final now = DateTime.now();
+      final startDate = DateTime(now.year, now.month, 1);
+      final endDate = DateTime(now.year, now.month + 1, 0);
+      
+      final response = await supabase
+          .from('budgets')
+          .select()
+          .eq('user_id', userId)
+          .eq('period_type', 'monthly')
+          .lte('start_date', startDate.toIso8601String().split('T')[0])
+          .gte('start_date', startDate.toIso8601String().split('T')[0])
+          .eq('is_active', true)
+          .maybeSingle();
+      
+      return response;
+    } catch (e) {
+      print('Error getting current month budget: $e');
+      return null;
+    }
+  }
+  
+  Future<void> createOrUpdateBudget({
+    required double amount,
+    required DateTime month,
+  }) async {
+    try {
+      final userId = currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+      
+      final startDate = DateTime(month.year, month.month, 1);
+      final endDate = DateTime(month.year, month.month + 1, 0);
+      
+      // Check if budget exists for this month
+      final existing = await getCurrentMonthBudget();
+      
+      if (existing != null) {
+        // Update existing budget
+        await supabase
+            .from('budgets')
+            .update({
+              'amount': amount,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', existing['id']);
+      } else {
+        // Create new budget
+        await supabase
+            .from('budgets')
+            .insert({
+              'user_id': userId,
+              'name': '${month.year}년 ${month.month}월 예산',
+              'amount': amount,
+              'period_type': 'monthly',
+              'start_date': startDate.toIso8601String().split('T')[0],
+              'end_date': endDate.toIso8601String().split('T')[0],
+              'is_active': true,
+            });
+      }
+    } catch (e) {
+      print('Error creating/updating budget: $e');
+      rethrow;
+    }
+  }
+  
+  Future<List<Map<String, dynamic>>> getBudgetHistory() async {
+    try {
+      final userId = currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+      
+      final response = await supabase
+          .from('budgets')
+          .select()
+          .eq('user_id', userId)
+          .eq('period_type', 'monthly')
+          .order('start_date', ascending: false)
+          .limit(12);
+      
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      print('Error getting budget history: $e');
+      return [];
+    }
   }
 }

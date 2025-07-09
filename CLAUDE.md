@@ -195,9 +195,73 @@ receipts/
 - Visual feedback for all actions
 - Error states and loading indicators
 
+### Navigation System
+- **Main Screen with Bottom Navigation** (`lib/screens/main_screen.dart`)
+  - IndexedStack for screen persistence
+  - 4 main tabs: 홈, 예산, OCR, 설정
+  - Material Design bottom navigation bar
+
+### Budget Management
+- **Budget Screen** (`lib/screens/budget_screen.dart`)
+  - Monthly budget setting with number formatting
+  - Income vs Expense bar chart visualization
+  - Budget usage percentage display
+  - Real-time data from Supabase
+  - Thousand separator input formatter
+  
+- **Budget Storage**
+  - Budgets stored in Supabase `budgets` table
+  - Automatic create/update logic
+  - Monthly period tracking
+  - Historical budget data
+
+### OCR System (Placeholder)
+- **OCR Screen** (`lib/screens/ocr_screen.dart`)
+  - Camera/Gallery image picker
+  - Receipt scanning UI
+  - Ready for OCR integration
+
+### Settings
+- **Settings Screen** (`lib/screens/settings_screen.dart`)
+  - User profile display
+  - Category management (planned)
+  - Notification settings (planned)
+  - Data backup (planned)
+  - Security settings (planned)
+  - App info and logout
+
+### Additional Services
+- **Budget Methods in Supabase Service**
+  - `getCurrentMonthBudget()` - Retrieve current month's budget
+  - `createOrUpdateBudget()` - Save/update budget data
+  - `getBudgetHistory()` - Get historical budget data
+  - `getMonthlySummary()` - Calculate monthly income/expense totals
+
+## UI/UX Design
+- Clean, modern Material Design 3 interface
+- Korean localization
+- Responsive layouts
+- Bottom navigation for main features
+- Number formatting with thousand separators
+- Chart visualizations with fl_chart
+- Intuitive navigation
+- Visual feedback for all actions
+- Error states and loading indicators
+
 ## Security Features
 - Row Level Security (RLS) on all tables
 - Automatic user profile creation
 - Secure authentication flow
 - Protected API endpoints
 - User data isolation
+- Fixed RLS policies to prevent infinite recursion
+- Personal data only (family group features disabled)
+
+## Recent Updates (2025-01-09)
+- Fixed login/data loading timing issues
+- Resolved RLS infinite recursion errors
+- Added bottom navigation with 4 main screens
+- Implemented budget management with Supabase integration
+- Added thousand separator formatting for currency inputs
+- Fixed chart display when no data exists
+- Removed family group related RLS policies

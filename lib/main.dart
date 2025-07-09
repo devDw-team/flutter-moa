@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'providers/auth_provider.dart';
 import 'providers/transaction_provider.dart';
-import 'screens/calendar_screen.dart';
+import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
 
 void main() async {
@@ -72,9 +72,9 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     
-    // Show calendar screen if authenticated, otherwise show login screen
+    // Show main screen if authenticated, otherwise show login screen
     if (authProvider.isAuthenticated) {
-      return const CalendarScreen();
+      return const MainScreen();
     } else {
       return const LoginScreen();
     }
