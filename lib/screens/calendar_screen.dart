@@ -244,7 +244,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, day, events) {
-                return _buildEventMarker(day, events);
+                return Positioned(
+                  bottom: 1,
+                  child: _buildEventMarker(day, events),
+                );
               },
             ),
             onDaySelected: (selectedDay, focusedDay) {

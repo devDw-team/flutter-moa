@@ -427,6 +427,7 @@ export type Database = {
           family_group_id: string | null
           id: string
           is_recurring: boolean | null
+          merchant: string | null
           receipt_id: string | null
           recurring_id: string | null
           tags: string[] | null
@@ -444,6 +445,7 @@ export type Database = {
           family_group_id?: string | null
           id?: string
           is_recurring?: boolean | null
+          merchant?: string | null
           receipt_id?: string | null
           recurring_id?: string | null
           tags?: string[] | null
@@ -461,6 +463,7 @@ export type Database = {
           family_group_id?: string | null
           id?: string
           is_recurring?: boolean | null
+          merchant?: string | null
           receipt_id?: string | null
           recurring_id?: string | null
           tags?: string[] | null

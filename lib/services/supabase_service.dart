@@ -37,6 +37,7 @@ class SupabaseService {
     required String type,
     required DateTime date,
     String? description,
+    String? merchant,
     List<String>? tags,
   }) async {
     final userId = currentUser?.id;
@@ -49,6 +50,7 @@ class SupabaseService {
       'type': type,
       'transaction_date': date.toIso8601String().split('T')[0],
       'description': description,
+      'merchant': merchant,
       'tags': tags,
     });
   }
@@ -147,6 +149,7 @@ class SupabaseService {
     String? type,
     DateTime? date,
     String? description,
+    String? merchant,
     List<String>? tags,
   }) async {
     final updateData = <String, dynamic>{};
@@ -156,6 +159,7 @@ class SupabaseService {
     if (type != null) updateData['type'] = type;
     if (date != null) updateData['transaction_date'] = date.toIso8601String().split('T')[0];
     if (description != null) updateData['description'] = description;
+    if (merchant != null) updateData['merchant'] = merchant;
     if (tags != null) updateData['tags'] = tags;
     
     await supabase
@@ -495,6 +499,29 @@ class SupabaseService {
       return List<Map<String, dynamic>>.from(response as List);
     } catch (e) {
       print('Error getting budget history: $e');
+      return [];
+    }
+  }
+
+  // Get category-wise expense summary for a month
+  Future<List<Map<String, dynamic>>> getCategoryAnalysis(DateTime month) async {
+    final userId = supabase.auth.currentUser!.id;
+    final startDate = DateTime(month.year, month.month, 1);
+    final endDate = DateTime(month.year, month.month + 1, 0);
+    
+    try {
+      final response = await supabase
+          .from('category_summary')
+          .select()
+          .eq('user_id', userId)
+          .eq('category_type', 'expense')
+          .gte('month', startDate.toIso8601String())
+          .lt('month', endDate.add(Duration(days: 1)).toIso8601String())
+          .order('total_amount', ascending: false);
+      
+      return response as List<Map<String, dynamic>>;
+    } catch (e) {
+      print('Error getting category analysis: $e');
       return [];
     }
   }

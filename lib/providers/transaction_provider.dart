@@ -64,6 +64,7 @@ class TransactionProvider extends ChangeNotifier {
     required String type,
     required DateTime date,
     String? description,
+    String? merchant,
     List<String>? tags,
   }) async {
     try {
@@ -73,6 +74,7 @@ class TransactionProvider extends ChangeNotifier {
         type: type,
         date: date,
         description: description,
+        merchant: merchant,
         tags: tags,
       );
       
@@ -92,6 +94,7 @@ class TransactionProvider extends ChangeNotifier {
     String? type,
     DateTime? date,
     String? description,
+    String? merchant,
     List<String>? tags,
   }) async {
     try {
@@ -102,6 +105,7 @@ class TransactionProvider extends ChangeNotifier {
         type: type,
         date: date,
         description: description,
+        merchant: merchant,
         tags: tags,
       );
       

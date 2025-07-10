@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/transaction_provider.dart';
 import '../services/supabase_service.dart';
+import '../models/category.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({Key? key}) : super(key: key);
@@ -18,6 +19,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   double _monthlyBudget = 0;
   double _totalIncome = 0;
   double _totalExpense = 0;
+  List<Map<String, dynamic>> _categoryAnalysis = [];
   bool _isLoading = true;
   
   @override
@@ -39,9 +41,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
       // Load monthly summary
       final summary = await _supabaseService.getMonthlySummary(DateTime.now());
       
+      // Load category analysis
+      final categoryData = await _supabaseService.getCategoryAnalysis(DateTime.now());
+      
       setState(() {
         _totalIncome = summary['income'] ?? 0;
         _totalExpense = summary['expense'] ?? 0;
+        _categoryAnalysis = categoryData;
         _isLoading = false;
       });
     } catch (e) {
@@ -366,6 +372,153 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 ),
                               ],
                             ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Category Analysis Card
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '카테고리별 지출',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 16),
+                            if (_categoryAnalysis.isEmpty)
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 32),
+                                  child: Text(
+                                    '이번 달 지출 내역이 없습니다',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              ...List.generate(
+                                _categoryAnalysis.length > 5 ? 5 : _categoryAnalysis.length,
+                                (index) {
+                                  final categoryData = _categoryAnalysis[index];
+                                  final categoryName = categoryData['category_name'] ?? '미분류';
+                                  final totalAmount = (categoryData['total_amount'] as num).toDouble();
+                                  final percentage = _totalExpense > 0 ? (totalAmount / _totalExpense * 100) : 0.0;
+                                  final category = context.read<TransactionProvider>().categories
+                                      .firstWhere((c) => c.name == categoryName,
+                                          orElse: () => Category(
+                                            id: '',
+                                            name: categoryName,
+                                            type: 'expense',
+                                            icon: '💰',
+                                            color: '#808080',
+                                            sortOrder: 999,
+                                            isSystem: true,
+                                            createdAt: DateTime.now(),
+                                            updatedAt: DateTime.now(),
+                                          ));
+                                  
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 20,
+                                              backgroundColor: Color(
+                                                int.parse(category.color?.replaceAll('#', '0xFF') ?? '0xFF808080'),
+                                              ).withOpacity(0.2),
+                                              child: Text(
+                                                category.icon ?? '💰',
+                                                style: const TextStyle(fontSize: 18),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        categoryName,
+                                                        style: const TextStyle(
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        '${NumberFormat('#,###').format(totalAmount.toInt())}원',
+                                                        style: const TextStyle(
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Stack(
+                                                    children: [
+                                                      Container(
+                                                        height: 6,
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.grey[300],
+                                                          borderRadius: BorderRadius.circular(3),
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        height: 6,
+                                                        width: MediaQuery.of(context).size.width * percentage / 100 * 0.8,
+                                                        decoration: BoxDecoration(
+                                                          color: Color(
+                                                            int.parse(category.color?.replaceAll('#', '0xFF') ?? '0xFF808080'),
+                                                          ),
+                                                          borderRadius: BorderRadius.circular(3),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    '${percentage.toStringAsFixed(1)}%',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (index < (_categoryAnalysis.length > 5 ? 4 : _categoryAnalysis.length - 1))
+                                          const Divider(height: 16),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            if (_categoryAnalysis.length > 5)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Center(
+                                  child: Text(
+                                    '외 ${_categoryAnalysis.length - 5}개 카테고리',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),

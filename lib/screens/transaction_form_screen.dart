@@ -23,6 +23,7 @@ class TransactionFormScreen extends StatefulWidget {
 class _TransactionFormScreenState extends State<TransactionFormScreen> {
   late TextEditingController _amountController;
   late TextEditingController _descriptionController;
+  late TextEditingController _merchantController;
   late DateTime _selectedDate;
   String _transactionType = 'expense';
   models.Category? _selectedCategory;
@@ -37,6 +38,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     _amountController = TextEditingController();
     _descriptionController = TextEditingController(
       text: widget.transaction?.description ?? '',
+    );
+    _merchantController = TextEditingController(
+      text: widget.transaction?.merchant ?? '',
     );
     _selectedDate = widget.transaction?.transactionDate ?? widget.initialDate;
     _transactionType = widget.transaction?.type ?? 'expense';
@@ -69,6 +73,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   void dispose() {
     _amountController.dispose();
     _descriptionController.dispose();
+    _merchantController.dispose();
     _amountFocusNode.dispose();
     super.dispose();
   }
@@ -138,6 +143,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
           type: _transactionType,
           date: _selectedDate,
           description: _descriptionController.text.trim(),
+          merchant: _merchantController.text.trim().isEmpty ? null : _merchantController.text.trim(),
         );
       } else {
         // Update existing transaction
@@ -148,6 +154,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
           type: _transactionType,
           date: _selectedDate,
           description: _descriptionController.text.trim(),
+          merchant: _merchantController.text.trim().isEmpty ? null : _merchantController.text.trim(),
         );
       }
       
@@ -379,6 +386,34 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                     ],
                   ),
                   onTap: _selectDate,
+                ),
+              ),
+              
+              const SizedBox(height: 1),
+              
+              // Merchant Input
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '사용처',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _merchantController,
+                      decoration: const InputDecoration(
+                        hintText: '사용처를 입력하세요 (선택사항)',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               

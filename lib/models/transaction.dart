@@ -7,6 +7,7 @@ class Transaction {
   final double amount;
   final String type; // 'income' or 'expense'
   final String? description;
+  final String? merchant;
   final DateTime transactionDate;
   final DateTime? transactionTime;
   final List<String>? tags;
@@ -26,6 +27,7 @@ class Transaction {
     required this.amount,
     required this.type,
     this.description,
+    this.merchant,
     required this.transactionDate,
     this.transactionTime,
     this.tags,
@@ -45,6 +47,7 @@ class Transaction {
       amount: (json['amount'] as num).toDouble(),
       type: json['type'],
       description: json['description'],
+      merchant: json['merchant'],
       transactionDate: DateTime.parse(json['transaction_date']),
       transactionTime: json['transaction_time'] != null
           ? DateTime.parse('1970-01-01 ${json['transaction_time']}')
@@ -69,6 +72,7 @@ class Transaction {
       'amount': amount,
       'type': type,
       'description': description,
+      'merchant': merchant,
       'transaction_date': transactionDate.toIso8601String().split('T')[0],
       'transaction_time': transactionTime?.toIso8601String().split('T')[1],
       'tags': tags,
@@ -87,6 +91,7 @@ class Transaction {
     double? amount,
     String? type,
     String? description,
+    String? merchant,
     DateTime? transactionDate,
     DateTime? transactionTime,
     List<String>? tags,
@@ -104,6 +109,7 @@ class Transaction {
       amount: amount ?? this.amount,
       type: type ?? this.type,
       description: description ?? this.description,
+      merchant: merchant ?? this.merchant,
       transactionDate: transactionDate ?? this.transactionDate,
       transactionTime: transactionTime ?? this.transactionTime,
       tags: tags ?? this.tags,

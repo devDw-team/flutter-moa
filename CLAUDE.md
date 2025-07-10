@@ -139,7 +139,7 @@ receipts/
 - **Calendar Screen** (`lib/screens/calendar_screen.dart`)
   - Monthly calendar view with TableCalendar
   - Daily transaction summaries
-  - Income/expense indicators on calendar dates
+  - Income/expense indicators on calendar dates (positioned below date numbers)
   - Swipe to edit/delete transactions
   - Floating action button for quick transaction entry
   - Logout functionality
@@ -150,6 +150,7 @@ receipts/
   - Amount input with currency formatting
   - Category selection with icons
   - Date picker
+  - Merchant input field
   - Optional notes field
 
 ### Category System
@@ -206,6 +207,7 @@ receipts/
   - Monthly budget setting with number formatting
   - Income vs Expense bar chart visualization
   - Budget usage percentage display
+  - Category-wise expense summary (top 5 categories)
   - Real-time data from Supabase
   - Thousand separator input formatter
   
@@ -236,6 +238,7 @@ receipts/
   - `createOrUpdateBudget()` - Save/update budget data
   - `getBudgetHistory()` - Get historical budget data
   - `getMonthlySummary()` - Calculate monthly income/expense totals
+  - `getCategoryAnalysis()` - Get category-wise expense summary
 
 ## UI/UX Design
 - Clean, modern Material Design 3 interface
@@ -265,3 +268,22 @@ receipts/
 - Added thousand separator formatting for currency inputs
 - Fixed chart display when no data exists
 - Removed family group related RLS policies
+
+## Recent Updates (2025-01-10)
+- **Calendar UI Improvements**
+  - Moved income/expense indicators to display below date numbers
+  - Fixed date range comparison for category analysis query
+  
+- **Budget Screen Enhancements**
+  - Added category-wise expense summary showing top 5 spending categories
+  - Visual progress bars for each category with percentage display
+  - Fixed null safety issues with category colors and icons
+  
+- **Transaction Form Updates**
+  - Added merchant field to track where money was spent
+  - Updated database schema with merchant column
+  - Updated all related models and services to support merchant data
+  
+- **Database Changes**
+  - Added `merchant` column to transactions table
+  - Regenerated TypeScript types for database consistency
