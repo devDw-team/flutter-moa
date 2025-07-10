@@ -21,6 +21,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
   double _totalExpense = 0;
   List<Map<String, dynamic>> _categoryAnalysis = [];
   bool _isLoading = true;
+  DateTime _selectedMonth = DateTime.now();
+  final PageController _pageController = PageController(initialPage: 999); // Start at a high number
   
   @override
   void initState() {
@@ -28,21 +30,41 @@ class _BudgetScreenState extends State<BudgetScreen> {
     _loadBudgetData();
   }
   
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+  
   Future<void> _loadBudgetData() async {
     setState(() => _isLoading = true);
     
     try {
-      // Load current month budget
-      final budget = await _supabaseService.getCurrentMonthBudget();
-      if (budget != null) {
-        _monthlyBudget = (budget['amount'] as num).toDouble();
+      // Load budget for selected month
+      final startDate = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
+      final endDate = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
+      
+      final budgets = await _supabaseService.supabase
+          .from('budgets')
+          .select()
+          .eq('user_id', _supabaseService.currentUser!.id)
+          .eq('period_type', 'monthly')
+          .gte('start_date', startDate.toIso8601String().split('T')[0])
+          .lte('start_date', endDate.toIso8601String().split('T')[0])
+          .eq('is_active', true)
+          .maybeSingle();
+      
+      if (budgets != null) {
+        _monthlyBudget = (budgets['amount'] as num).toDouble();
+      } else {
+        _monthlyBudget = 0;
       }
       
       // Load monthly summary
-      final summary = await _supabaseService.getMonthlySummary(DateTime.now());
+      final summary = await _supabaseService.getMonthlySummary(_selectedMonth);
       
       // Load category analysis
-      final categoryData = await _supabaseService.getCategoryAnalysis(DateTime.now());
+      final categoryData = await _supabaseService.getCategoryAnalysis(_selectedMonth);
       
       setState(() {
         _totalIncome = summary['income'] ?? 0;
@@ -64,7 +86,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('월 예산 설정'),
+        title: Text('${_selectedMonth.year}년 ${_selectedMonth.month}월 예산 설정'),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
@@ -92,7 +114,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 try {
                   await _supabaseService.createOrUpdateBudget(
                     amount: newBudget,
-                    month: DateTime.now(),
+                    month: _selectedMonth,
                   );
                   
                   setState(() {
@@ -123,18 +145,32 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
   
+  void _changeMonth(int months) {
+    setState(() {
+      _selectedMonth = DateTime(
+        _selectedMonth.year,
+        _selectedMonth.month + months,
+        1,
+      );
+    });
+    _loadBudgetData();
+  }
+  
   @override
   Widget build(BuildContext context) {
     final budgetUsage = _monthlyBudget > 0 ? (_totalExpense / _monthlyBudget * 100) : 0.0;
+    final isCurrentMonth = _selectedMonth.year == DateTime.now().year && 
+                          _selectedMonth.month == DateTime.now().month;
     
     return Scaffold(
       appBar: AppBar(
         title: const Text('예산 관리'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _showBudgetDialog,
-          ),
+          if (isCurrentMonth)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: _showBudgetDialog,
+            ),
         ],
       ),
       body: _isLoading
@@ -147,6 +183,37 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Month Selector
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.chevron_left),
+                              onPressed: () => _changeMonth(-1),
+                            ),
+                            Text(
+                              DateFormat('yyyy년 MM월').format(_selectedMonth),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.chevron_right),
+                              onPressed: _selectedMonth.isBefore(
+                                DateTime(DateTime.now().year, DateTime.now().month + 1, 0)
+                              ) ? () => _changeMonth(1) : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
                     // Monthly Budget Card
                     Card(
                       child: Padding(
@@ -154,9 +221,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '${DateFormat('yyyy년 MM월').format(DateTime.now())} 예산',
-                              style: Theme.of(context).textTheme.titleLarge,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '월 예산',
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                if (_monthlyBudget == 0 && isCurrentMonth)
+                                  TextButton(
+                                    onPressed: _showBudgetDialog,
+                                    child: const Text('예산 설정'),
+                                  ),
+                              ],
                             ),
                             const SizedBox(height: 16),
                             Row(

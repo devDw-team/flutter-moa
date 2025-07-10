@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/supabase_service.dart';
+import 'profile_edit_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -12,6 +13,22 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _supabaseService = SupabaseService.instance;
+  Map<String, dynamic>? _userProfile;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+  
+  Future<void> _loadUserProfile() async {
+    final profile = await _supabaseService.getUserProfile();
+    if (mounted) {
+      setState(() {
+        _userProfile = profile;
+      });
+    }
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -24,47 +41,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         children: [
           // User Profile Section
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.grey[100],
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.blue,
-                  child: Text(
-                    user?.email?.substring(0, 1).toUpperCase() ?? 'U',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+          InkWell(
+            onTap: () async {
+              final result = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfileEditScreen(),
+                ),
+              );
+              if (result == true) {
+                _loadUserProfile();
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.grey[100],
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.grey[300],
+                    backgroundImage: _userProfile?['avatar_url'] != null
+                        ? NetworkImage(_userProfile!['avatar_url'])
+                        : null,
+                    child: _userProfile?['avatar_url'] == null
+                        ? Icon(
+                            Icons.person,
+                            size: 30,
+                            color: Colors.grey[600],
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _userProfile?['full_name'] ?? user?.email ?? '사용자',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          user?.email ?? '',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user?.email ?? '사용자',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '가입일: ${user?.createdAt.substring(0, 10) ?? ''}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
+                  Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey[600],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           

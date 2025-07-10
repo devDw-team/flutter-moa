@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:io';
 
 class SupabaseService {
   static SupabaseService? _instance;
@@ -414,30 +415,33 @@ class SupabaseService {
   }
   
   // Budget Methods
-  Future<Map<String, dynamic>?> getCurrentMonthBudget() async {
+  Future<Map<String, dynamic>?> getBudgetForMonth(DateTime month) async {
     try {
       final userId = currentUser?.id;
       if (userId == null) throw Exception('User not authenticated');
       
-      final now = DateTime.now();
-      final startDate = DateTime(now.year, now.month, 1);
-      final endDate = DateTime(now.year, now.month + 1, 0);
+      final startDate = DateTime(month.year, month.month, 1);
+      final endDate = DateTime(month.year, month.month + 1, 0);
       
       final response = await supabase
           .from('budgets')
           .select()
           .eq('user_id', userId)
           .eq('period_type', 'monthly')
-          .lte('start_date', startDate.toIso8601String().split('T')[0])
           .gte('start_date', startDate.toIso8601String().split('T')[0])
+          .lte('start_date', endDate.toIso8601String().split('T')[0])
           .eq('is_active', true)
           .maybeSingle();
       
       return response;
     } catch (e) {
-      print('Error getting current month budget: $e');
+      print('Error getting budget for month: $e');
       return null;
     }
+  }
+  
+  Future<Map<String, dynamic>?> getCurrentMonthBudget() async {
+    return getBudgetForMonth(DateTime.now());
   }
   
   Future<void> createOrUpdateBudget({
@@ -452,7 +456,7 @@ class SupabaseService {
       final endDate = DateTime(month.year, month.month + 1, 0);
       
       // Check if budget exists for this month
-      final existing = await getCurrentMonthBudget();
+      final existing = await getBudgetForMonth(month);
       
       if (existing != null) {
         // Update existing budget
@@ -523,6 +527,93 @@ class SupabaseService {
     } catch (e) {
       print('Error getting category analysis: $e');
       return [];
+    }
+  }
+  
+  // Profile Methods
+  Future<Map<String, dynamic>?> getUserProfile() async {
+    try {
+      final userId = currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+      
+      final response = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .single();
+      
+      return response;
+    } catch (e) {
+      print('Error getting user profile: $e');
+      return null;
+    }
+  }
+  
+  Future<void> updateProfile({
+    required String fullName,
+    String? avatarUrl,
+  }) async {
+    try {
+      final userId = currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+      
+      final updateData = {
+        'full_name': fullName,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      
+      if (avatarUrl != null) {
+        updateData['avatar_url'] = avatarUrl;
+      }
+      
+      await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', userId);
+    } catch (e) {
+      print('Error updating profile: $e');
+      rethrow;
+    }
+  }
+  
+  Future<String> uploadAvatar(File imageFile) async {
+    try {
+      final userId = currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+      
+      final bytes = await imageFile.readAsBytes();
+      final fileExt = imageFile.path.split('.').last;
+      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final filePath = '$userId/$fileName';
+      
+      // Delete old avatar if exists
+      try {
+        final List<FileObject> files = await supabase.storage
+            .from('avatars')
+            .list(path: userId);
+        
+        for (final file in files) {
+          await supabase.storage
+              .from('avatars')
+              .remove(['$userId/${file.name}']);
+        }
+      } catch (e) {
+        // Ignore errors when deleting old avatars
+        print('Error deleting old avatar: $e');
+      }
+      
+      await supabase.storage
+          .from('avatars')
+          .uploadBinary(filePath, bytes);
+      
+      final String publicUrl = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+      
+      return publicUrl;
+    } catch (e) {
+      print('Error uploading avatar: $e');
+      rethrow;
     }
   }
 }

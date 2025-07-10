@@ -105,7 +105,7 @@ All tables implement Row Level Security (RLS) with these patterns:
 
 ## Storage Structure
 
-Receipts are stored in Supabase Storage:
+### Receipts Storage
 ```
 receipts/
   {user_id}/
@@ -114,6 +114,17 @@ receipts/
         {receipt_id}_original.jpg
         {receipt_id}_thumb.jpg
 ```
+
+### Avatar Storage
+```
+avatars/
+  {user_id}/
+    avatar_{timestamp}.{ext}
+```
+- Public bucket for avatar images
+- Supports JPEG, PNG, WebP formats
+- 5MB file size limit
+- Automatic deletion of old avatars on new upload
 
 ## Implemented Features
 
@@ -210,6 +221,9 @@ receipts/
   - Category-wise expense summary (top 5 categories)
   - Real-time data from Supabase
   - Thousand separator input formatter
+  - Month navigation to view previous months' budgets
+  - Edit button only available for current month
+  - Historical budget viewing with month selector
   
 - **Budget Storage**
   - Budgets stored in Supabase `budgets` table
@@ -225,20 +239,35 @@ receipts/
 
 ### Settings
 - **Settings Screen** (`lib/screens/settings_screen.dart`)
-  - User profile display
+  - User profile display with avatar and name
+  - Profile editing navigation
   - Category management (planned)
   - Notification settings (planned)
   - Data backup (planned)
   - Security settings (planned)
   - App info and logout
 
+- **Profile Edit Screen** (`lib/screens/profile_edit_screen.dart`)
+  - Edit user name
+  - Upload/change profile avatar image
+  - Image picker integration (gallery)
+  - Avatar storage in Supabase Storage
+  - Automatic deletion of old avatars
+  - Email display (read-only)
+
 ### Additional Services
 - **Budget Methods in Supabase Service**
   - `getCurrentMonthBudget()` - Retrieve current month's budget
+  - `getBudgetForMonth()` - Retrieve budget for any specific month
   - `createOrUpdateBudget()` - Save/update budget data
   - `getBudgetHistory()` - Get historical budget data
   - `getMonthlySummary()` - Calculate monthly income/expense totals
   - `getCategoryAnalysis()` - Get category-wise expense summary
+
+- **Profile Methods in Supabase Service**
+  - `getUserProfile()` - Retrieve user profile data
+  - `updateProfile()` - Update user name and avatar URL
+  - `uploadAvatar()` - Upload avatar image to Supabase Storage
 
 ## UI/UX Design
 - Clean, modern Material Design 3 interface
@@ -287,3 +316,20 @@ receipts/
 - **Database Changes**
   - Added `merchant` column to transactions table
   - Regenerated TypeScript types for database consistency
+
+- **Profile Management Features**
+  - Added profile editing screen accessible from settings
+  - Profile avatar upload with image picker
+  - Avatar storage in Supabase Storage with public access
+  - Name editing functionality
+  - Automatic old avatar deletion on new upload
+  - Fixed RLS infinite recursion in family_members table
+  - Created storage RLS policies for avatars bucket
+
+- **Budget History Features**
+  - Added month navigation controls to budget screen
+  - Left/right arrow buttons to navigate between months
+  - Cannot navigate beyond current month
+  - Budget data loads dynamically for selected month
+  - Edit button only shown for current month
+  - All charts and summaries update based on selected month
