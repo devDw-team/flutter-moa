@@ -1,0 +1,40 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="#4CAF50"/>
+  
+  <!-- Inner Circle (White) -->
+  <circle cx="256" cy="256" r="200" fill="#FFFFFF"/>
+  
+  <!-- Piggy Bank Body -->
+  <ellipse cx="256" cy="280" rx="120" ry="90" fill="#FFB74D"/>
+  
+  <!-- Piggy Bank Snout -->
+  <ellipse cx="256" cy="320" rx="50" ry="35" fill="#FF9800"/>
+  
+  <!-- Nostrils -->
+  <circle cx="240" cy="320" r="5" fill="#F57C00"/>
+  <circle cx="272" cy="320" r="5" fill="#F57C00"/>
+  
+  <!-- Eye -->
+  <circle cx="290" cy="270" r="12" fill="#FFFFFF"/>
+  <circle cx="290" cy="270" r="8" fill="#212121"/>
+  
+  <!-- Ear -->
+  <path d="M 320 240 Q 340 220 330 250 Q 320 260 310 250" fill="#FF9800"/>
+  
+  <!-- Coin Slot -->
+  <rect x="236" y="220" width="40" height="6" rx="3" fill="#F57C00"/>
+  
+  <!-- Coins (representing savings) -->
+  <circle cx="180" cy="180" r="25" fill="#FFC107" opacity="0.9"/>
+  <text x="180" y="190" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF" text-anchor="middle">₩</text>
+  
+  <circle cx="330" cy="180" r="25" fill="#FFC107" opacity="0.9"/>
+  <text x="330" y="190" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF" text-anchor="middle">₩</text>
+  
+  <!-- Legs -->
+  <rect x="200" y="350" width="15" height="25" rx="7" fill="#FF9800"/>
+  <rect x="230" y="350" width="15" height="25" rx="7" fill="#FF9800"/>
+  <rect x="267" y="350" width="15" height="25" rx="7" fill="#FF9800"/>
+  <rect x="297" y="350" width="15" height="25" rx="7" fill="#FF9800"/>
+</svg>

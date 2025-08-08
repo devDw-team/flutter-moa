@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/supabase_service.dart';
 import 'profile_edit_screen.dart';
+import 'password_verification_screen.dart';
+import 'account_verification_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -106,6 +108,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           
           // Settings List
           ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text('회원정보 수정'),
+            subtitle: const Text('프로필 정보를 수정합니다'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AccountVerificationScreen(),
+                ),
+              );
+            },
+          ),
+          
+          ListTile(
             leading: const Icon(Icons.category),
             title: const Text('카테고리 관리'),
             subtitle: const Text('수입/지출 카테고리를 관리합니다'),
@@ -137,6 +154,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('백업 기능은 준비 중입니다')),
+              );
+            },
+          ),
+          
+          ListTile(
+            leading: const Icon(Icons.lock),
+            title: const Text('비밀번호 변경'),
+            subtitle: const Text('계정 비밀번호를 변경합니다'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PasswordVerificationScreen(),
+                ),
               );
             },
           ),

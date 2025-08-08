@@ -5,20 +5,23 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'providers/auth_provider.dart';
 import 'providers/transaction_provider.dart';
-import 'screens/main_screen.dart';
-import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize date formatting for Korean locale
-  await initializeDateFormatting('ko_KR', null);
-  
-  // Initialize Supabase
-  await Supabase.initialize(
-    url: 'https://usqslqpqvidvvaqvtgnv.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzcXNscXBxdmlkdnZhcXZ0Z252Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE3NzA4MzQsImV4cCI6MjA2NzM0NjgzNH0.rLUqlhTAu8xF1JIpQ3ic_dHiobVjYHh3uV0ps6cbpBI',
-  );
+  try {
+    // Initialize date formatting for Korean locale
+    await initializeDateFormatting('ko_KR', null);
+    
+    // Initialize Supabase
+    await Supabase.initialize(
+      url: 'https://usqslqpqvidvvaqvtgnv.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzcXNscXBxdmlkdnZhcXZ0Z252Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE3NzA4MzQsImV4cCI6MjA2NzM0NjgzNH0.rLUqlhTAu8xF1JIpQ3ic_dHiobVjYHh3uV0ps6cbpBI',
+    );
+  } catch (e) {
+    print('Initialization error: $e');
+  }
   
   runApp(const MyApp());
 }
@@ -59,24 +62,8 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const AuthWrapper(),
+        home: const SplashScreen(),
       ),
     );
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    
-    // Show main screen if authenticated, otherwise show login screen
-    if (authProvider.isAuthenticated) {
-      return const MainScreen();
-    } else {
-      return const LoginScreen();
-    }
   }
 }

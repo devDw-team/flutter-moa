@@ -23,11 +23,17 @@ class _BudgetScreenState extends State<BudgetScreen> {
   bool _isLoading = true;
   DateTime _selectedMonth = DateTime.now();
   final PageController _pageController = PageController(initialPage: 999); // Start at a high number
+  int _displayedCategoryCount = 5; // Initially show 5 categories
   
   @override
   void initState() {
     super.initState();
     _loadBudgetData();
+    
+    // Load initial transaction data for current month
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TransactionProvider>().loadTransactions(_selectedMonth);
+    });
   }
   
   @override
@@ -75,6 +81,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
     } catch (e) {
       print('Error loading budget data: $e');
       setState(() => _isLoading = false);
+    }
+  }
+  
+  Future<void> _loadCategoryAnalysis() async {
+    try {
+      // Load category analysis
+      final categoryData = await _supabaseService.getCategoryAnalysis(_selectedMonth);
+      
+      if (mounted) {
+        setState(() {
+          _categoryAnalysis = categoryData;
+        });
+      }
+    } catch (e) {
+      print('Error loading category analysis: $e');
     }
   }
   
@@ -152,21 +173,47 @@ class _BudgetScreenState extends State<BudgetScreen> {
         _selectedMonth.month + months,
         1,
       );
+      // Reset displayed category count when changing month
+      _displayedCategoryCount = 5;
     });
     _loadBudgetData();
   }
   
   @override
   Widget build(BuildContext context) {
-    final budgetUsage = _monthlyBudget > 0 ? (_totalExpense / _monthlyBudget * 100) : 0.0;
+    // Watch TransactionProvider to get real-time updates
+    final transactionProvider = context.watch<TransactionProvider>();
+    
+    // Use monthly summary from TransactionProvider if available and for current month
     final isCurrentMonth = _selectedMonth.year == DateTime.now().year && 
                           _selectedMonth.month == DateTime.now().month;
+    
+    // Update totals from provider if current month
+    if (isCurrentMonth && transactionProvider.monthlySummary.isNotEmpty) {
+      // Update income and expense from provider
+      final newIncome = transactionProvider.monthlySummary['income'] ?? 0;
+      final newExpense = transactionProvider.monthlySummary['expense'] ?? 0;
+      
+      // If values changed, update state and reload category analysis
+      if (newIncome != _totalIncome || newExpense != _totalExpense) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          setState(() {
+            _totalIncome = newIncome;
+            _totalExpense = newExpense;
+          });
+          // Reload category analysis when transactions change
+          _loadCategoryAnalysis();
+        });
+      }
+    }
+    
+    final budgetUsage = _monthlyBudget > 0 ? (_totalExpense / _monthlyBudget * 100) : 0.0;
     
     return Scaffold(
       appBar: AppBar(
         title: const Text('예산 관리'),
         actions: [
-          if (isCurrentMonth)
+          if (isCurrentMonth || _selectedMonth.isAfter(DateTime.now()))
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: _showBudgetDialog,
@@ -203,9 +250,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.chevron_right),
-                              onPressed: _selectedMonth.isBefore(
-                                DateTime(DateTime.now().year, DateTime.now().month + 1, 0)
-                              ) ? () => _changeMonth(1) : null,
+                              onPressed: () => _changeMonth(1),
                             ),
                           ],
                         ),
@@ -228,7 +273,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                   '월 예산',
                                   style: Theme.of(context).textTheme.titleLarge,
                                 ),
-                                if (_monthlyBudget == 0 && isCurrentMonth)
+                                if (_monthlyBudget == 0 && (isCurrentMonth || _selectedMonth.isAfter(DateTime.now())))
                                   TextButton(
                                     onPressed: _showBudgetDialog,
                                     child: const Text('예산 설정'),
@@ -483,7 +528,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               )
                             else
                               ...List.generate(
-                                _categoryAnalysis.length > 5 ? 5 : _categoryAnalysis.length,
+                                _categoryAnalysis.length > _displayedCategoryCount 
+                                    ? _displayedCategoryCount 
+                                    : _categoryAnalysis.length,
                                 (index) {
                                   final categoryData = _categoryAnalysis[index];
                                   final categoryName = categoryData['category_name'] ?? '미분류';
@@ -576,23 +623,45 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                             ),
                                           ],
                                         ),
-                                        if (index < (_categoryAnalysis.length > 5 ? 4 : _categoryAnalysis.length - 1))
+                                        if (index < (_categoryAnalysis.length > _displayedCategoryCount 
+                                            ? _displayedCategoryCount - 1 
+                                            : _categoryAnalysis.length - 1))
                                           const Divider(height: 16),
                                       ],
                                     ),
                                   );
                                 },
                               ),
-                            if (_categoryAnalysis.length > 5)
+                            if (_categoryAnalysis.length > _displayedCategoryCount)
                               Padding(
-                                padding: const EdgeInsets.only(top: 8),
+                                padding: const EdgeInsets.only(top: 16),
                                 child: Center(
-                                  child: Text(
-                                    '외 ${_categoryAnalysis.length - 5}개 카테고리',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 14,
-                                    ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        '외 ${_categoryAnalysis.length - _displayedCategoryCount}개 카테고리',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _displayedCategoryCount += 5;
+                                          });
+                                        },
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: const [
+                                            Text('더보기'),
+                                            SizedBox(width: 4),
+                                            Icon(Icons.expand_more, size: 20),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),

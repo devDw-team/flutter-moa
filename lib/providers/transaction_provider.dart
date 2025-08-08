@@ -98,6 +98,10 @@ class TransactionProvider extends ChangeNotifier {
     List<String>? tags,
   }) async {
     try {
+      // Get the original transaction to know which month to reload
+      final originalTransaction = _transactions.firstWhere((t) => t.id == transactionId);
+      final originalDate = originalTransaction.transactionDate;
+      
       await _supabaseService.updateTransaction(
         transactionId: transactionId,
         categoryId: categoryId,
@@ -109,10 +113,14 @@ class TransactionProvider extends ChangeNotifier {
         tags: tags,
       );
       
-      // Find the transaction and update locally
-      final index = _transactions.indexWhere((t) => t.id == transactionId);
-      if (index != -1 && date != null) {
-        await loadTransactions(date);
+      // Reload transactions for the month
+      final dateToReload = date ?? originalDate;
+      await loadTransactions(dateToReload);
+      
+      // Also reload if the month changed
+      if (date != null && 
+          (date.year != originalDate.year || date.month != originalDate.month)) {
+        await loadTransactions(originalDate);
       }
     } catch (e) {
       _error = e.toString();
@@ -123,10 +131,18 @@ class TransactionProvider extends ChangeNotifier {
 
   Future<void> deleteTransaction(String transactionId) async {
     try {
+      // Get the transaction date before deleting to know which month to reload
+      final transaction = _transactions.firstWhere((t) => t.id == transactionId);
+      final transactionDate = transaction.transactionDate;
+      
       await _supabaseService.deleteTransaction(transactionId);
       
       // Remove from local list
       _transactions.removeWhere((t) => t.id == transactionId);
+      
+      // Reload monthly summary for the affected month
+      _monthlySummary = await _supabaseService.getMonthlySummary(transactionDate);
+      
       notifyListeners();
     } catch (e) {
       _error = e.toString();

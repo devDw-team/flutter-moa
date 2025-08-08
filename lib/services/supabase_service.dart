@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
+import 'dart:typed_data';
 
 class SupabaseService {
   static SupabaseService? _instance;
@@ -613,6 +614,61 @@ class SupabaseService {
       return publicUrl;
     } catch (e) {
       print('Error uploading avatar: $e');
+      rethrow;
+    }
+  }
+  
+  Future<String> uploadAvatarBytes(Uint8List bytes, {String fileExt = 'jpg'}) async {
+    try {
+      final userId = currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+      
+      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final filePath = '$userId/$fileName';
+      
+      // Delete old avatar if exists
+      try {
+        final List<FileObject> files = await supabase.storage
+            .from('avatars')
+            .list(path: userId);
+        
+        for (final file in files) {
+          await supabase.storage
+              .from('avatars')
+              .remove(['$userId/${file.name}']);
+        }
+      } catch (e) {
+        // Ignore errors when deleting old avatars
+        print('Error deleting old avatar: $e');
+      }
+      
+      await supabase.storage
+          .from('avatars')
+          .uploadBinary(filePath, bytes);
+      
+      final String publicUrl = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+      
+      return publicUrl;
+    } catch (e) {
+      print('Error uploading avatar: $e');
+      rethrow;
+    }
+  }
+  
+  // Password Management
+  Future<void> updatePassword(String newPassword) async {
+    try {
+      final response = await supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      
+      if (response.user == null) {
+        throw Exception('비밀번호 변경에 실패했습니다');
+      }
+    } catch (e) {
+      print('Error updating password: $e');
       rethrow;
     }
   }

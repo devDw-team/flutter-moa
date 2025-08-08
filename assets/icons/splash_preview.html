@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>모아 Lite - Splash Screen Preview</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .preview {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            border: 10px solid #333;
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+        }
+        .splash-screen {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #4CAF50 0%, #66BB6A 50%, #81C784 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .logo-container {
+            width: 200px;
+            height: 200px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .chart-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        .bar {
+            border-radius: 5px;
+        }
+        .bar1 {
+            width: 20px;
+            height: 40px;
+            background: #4CAF50;
+        }
+        .bar2 {
+            width: 20px;
+            height: 60px;
+            background: #66BB6A;
+        }
+        .bar3 {
+            width: 20px;
+            height: 50px;
+            background: #81C784;
+        }
+        .won-symbol {
+            position: absolute;
+            top: 30px;
+            font-size: 36px;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .app-name {
+            color: white;
+            font-size: 36px;
+            font-weight: bold;
+            margin-top: 40px;
+        }
+        .tagline {
+            color: rgba(255,255,255,0.9);
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        .loading-bar {
+            position: absolute;
+            bottom: 100px;
+            width: 200px;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .loading-progress {
+            height: 100%;
+            background: white;
+            animation: loading 2s infinite;
+        }
+        @keyframes loading {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        .coin {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .coin1 { top: 50px; left: 30px; }
+        .coin2 { top: 100px; right: 40px; }
+        .coin3 { bottom: 150px; left: 50px; }
+        .coin4 { bottom: 200px; right: 30px; }
+        
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="preview">
+            <h2>스플래시 화면 디자인</h2>
+            <div class="phone-frame">
+                <div class="splash-screen">
+                    <!-- Decorative coins -->
+                    <div class="coin coin1">₩</div>
+                    <div class="coin coin2">₩</div>
+                    <div class="coin coin3">₩</div>
+                    <div class="coin coin4">₩</div>
+                    
+                    <!-- Main logo -->
+                    <div class="logo-container">
+                        <div class="won-symbol">₩</div>
+                        <div class="chart-bars">
+                            <div class="bar bar1"></div>
+                            <div class="bar bar2"></div>
+                            <div class="bar bar3"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- App name and tagline -->
+                    <div class="app-name">모아 Lite</div>
+                    <div class="tagline">똑똑한 가계부</div>
+                    
+                    <!-- Loading bar -->
+                    <div class="loading-bar">
+                        <div class="loading-progress"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px;">
+        <h3>스플래시 화면 특징</h3>
+        <ul style="display: inline-block; text-align: left;">
+            <li>앱 아이콘과 일관된 디자인 언어 사용</li>
+            <li>그라데이션 배경 (#4CAF50 → #66BB6A → #81C784)</li>
+            <li>중앙에 로고와 차트 바 표시</li>
+            <li>원화(₩) 기호로 금융 앱임을 표현</li>
+            <li>앱 이름 "모아 Lite"와 태그라인 "똑똑한 가계부"</li>
+            <li>하단 로딩 인디케이터</li>
+            <li>배경에 반투명 코인 장식 요소</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -175,9 +175,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _deleteTransaction(Transaction transaction) async {
     try {
-      await _supabaseService.deleteTransaction(transaction.id);
+      // Use TransactionProvider to delete (which will trigger notifyListeners)
+      await context.read<TransactionProvider>().deleteTransaction(transaction.id);
+      
+      // Reload local data
       await _loadDayTransactions(_selectedDay);
       await _loadMonthData(_focusedDay);
+      
+      // Also reload transactions in provider for current month
+      await context.read<TransactionProvider>().loadTransactions(_focusedDay);
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('거래가 삭제되었습니다')),
       );
