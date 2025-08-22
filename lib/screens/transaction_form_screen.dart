@@ -24,8 +24,11 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   late TextEditingController _amountController;
   late TextEditingController _descriptionController;
   late TextEditingController _merchantController;
+  late TextEditingController _installmentController;
   late DateTime _selectedDate;
   String _transactionType = 'expense';
+  String? _paymentMethod;
+  bool _isInstallment = false;
   models.Category? _selectedCategory;
   
   final _formKey = GlobalKey<FormState>();
@@ -42,8 +45,13 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     _merchantController = TextEditingController(
       text: widget.transaction?.merchant ?? '',
     );
+    _installmentController = TextEditingController(
+      text: widget.transaction?.installmentMonths?.toString() ?? '',
+    );
     _selectedDate = widget.transaction?.transactionDate ?? widget.initialDate;
     _transactionType = widget.transaction?.type ?? 'expense';
+    _paymentMethod = widget.transaction?.paymentMethod;
+    _isInstallment = widget.transaction?.installmentMonths != null;
     
     // Load categories
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -74,6 +82,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     _amountController.dispose();
     _descriptionController.dispose();
     _merchantController.dispose();
+    _installmentController.dispose();
     _amountFocusNode.dispose();
     super.dispose();
   }
@@ -134,17 +143,33 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     try {
       final amountText = _amountController.text.replaceAll(',', '');
       final amount = double.parse(amountText);
+      final installmentMonths = _isInstallment ? int.tryParse(_installmentController.text) : null;
       
       if (widget.transaction == null) {
         // Create new transaction
-        await provider.addTransaction(
-          categoryId: _selectedCategory!.id,
-          amount: amount,
-          type: _transactionType,
-          date: _selectedDate,
-          description: _descriptionController.text.trim(),
-          merchant: _merchantController.text.trim().isEmpty ? null : _merchantController.text.trim(),
-        );
+        if (_isInstallment && installmentMonths != null && installmentMonths > 1) {
+          // Create installment transactions
+          await provider.createInstallmentTransactions(
+            categoryId: _selectedCategory!.id,
+            totalAmount: amount,
+            installmentMonths: installmentMonths,
+            startDate: _selectedDate,
+            paymentMethod: _paymentMethod ?? 'card',
+            description: _descriptionController.text.trim(),
+            merchant: _merchantController.text.trim().isEmpty ? null : _merchantController.text.trim(),
+          );
+        } else {
+          // Create regular transaction
+          await provider.addTransaction(
+            categoryId: _selectedCategory!.id,
+            amount: amount,
+            type: _transactionType,
+            date: _selectedDate,
+            description: _descriptionController.text.trim(),
+            merchant: _merchantController.text.trim().isEmpty ? null : _merchantController.text.trim(),
+            paymentMethod: _paymentMethod,
+          );
+        }
       } else {
         // Update existing transaction
         await provider.updateTransaction(
@@ -155,6 +180,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
           date: _selectedDate,
           description: _descriptionController.text.trim(),
           merchant: _merchantController.text.trim().isEmpty ? null : _merchantController.text.trim(),
+          paymentMethod: _paymentMethod,
         );
       }
       
@@ -366,6 +392,153 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                   onTap: _showCategoryPicker,
                 ),
               ),
+              
+              const SizedBox(height: 1),
+              
+              // Payment Method Selector
+              Container(
+                color: Colors.white,
+                child: ListTile(
+                  title: const Text('결제수단'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_paymentMethod != null)
+                        Text(
+                          _paymentMethod == 'card' ? '카드' :
+                          _paymentMethod == 'transfer' ? '계좌이체' : '현금',
+                          style: const TextStyle(fontSize: 16),
+                        )
+                      else
+                        const Text(
+                          '선택하세요',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 16,
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right, color: Colors.grey),
+                    ],
+                  ),
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => Container(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.credit_card),
+                              title: const Text('카드'),
+                              onTap: () {
+                                setState(() {
+                                  _paymentMethod = 'card';
+                                });
+                                Navigator.pop(context);
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.account_balance),
+                              title: const Text('계좌이체'),
+                              onTap: () {
+                                setState(() {
+                                  _paymentMethod = 'transfer';
+                                });
+                                Navigator.pop(context);
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.money),
+                              title: const Text('현금'),
+                              onTap: () {
+                                setState(() {
+                                  _paymentMethod = 'cash';
+                                });
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              
+              const SizedBox(height: 1),
+              
+              // Installment Toggle (only for expense)
+              if (_transactionType == 'expense')
+                Container(
+                  color: Colors.white,
+                  child: SwitchListTile(
+                    title: const Text('할부'),
+                    subtitle: _isInstallment
+                        ? Text(
+                            '월 ${_installmentController.text.isNotEmpty ? _formatCurrency(((double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0) / (int.tryParse(_installmentController.text) ?? 1)).toInt().toString()) : '0'}원',
+                            style: const TextStyle(color: Colors.blue),
+                          )
+                        : null,
+                    value: _isInstallment,
+                    onChanged: (value) {
+                      setState(() {
+                        _isInstallment = value;
+                        if (!value) {
+                          _installmentController.clear();
+                        }
+                      });
+                    },
+                  ),
+                ),
+              
+              // Installment Months Input
+              if (_isInstallment && _transactionType == 'expense')
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '할부 개월',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _installmentController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: const InputDecoration(
+                          hintText: '할부 개월 수를 입력하세요',
+                          suffixText: '개월',
+                          border: InputBorder.none,
+                        ),
+                        onChanged: (value) {
+                          setState(() {});
+                        },
+                        validator: (value) {
+                          if (_isInstallment && (value == null || value.isEmpty)) {
+                            return '할부 개월을 입력해주세요';
+                          }
+                          if (_isInstallment) {
+                            final months = int.tryParse(value!);
+                            if (months == null || months < 2 || months > 60) {
+                              return '2~60개월 사이로 입력해주세요';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               
               const SizedBox(height: 1),
               

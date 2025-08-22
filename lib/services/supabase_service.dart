@@ -40,6 +40,7 @@ class SupabaseService {
     required DateTime date,
     String? description,
     String? merchant,
+    String? paymentMethod,
     List<String>? tags,
   }) async {
     final userId = currentUser?.id;
@@ -53,6 +54,7 @@ class SupabaseService {
       'transaction_date': date.toIso8601String().split('T')[0],
       'description': description,
       'merchant': merchant,
+      'payment_method': paymentMethod,
       'tags': tags,
     });
   }
@@ -152,6 +154,7 @@ class SupabaseService {
     DateTime? date,
     String? description,
     String? merchant,
+    String? paymentMethod,
     List<String>? tags,
   }) async {
     final updateData = <String, dynamic>{};
@@ -162,6 +165,7 @@ class SupabaseService {
     if (date != null) updateData['transaction_date'] = date.toIso8601String().split('T')[0];
     if (description != null) updateData['description'] = description;
     if (merchant != null) updateData['merchant'] = merchant;
+    if (paymentMethod != null) updateData['payment_method'] = paymentMethod;
     if (tags != null) updateData['tags'] = tags;
     
     await supabase
@@ -527,6 +531,95 @@ class SupabaseService {
       return response as List<Map<String, dynamic>>;
     } catch (e) {
       print('Error getting category analysis: $e');
+      return [];
+    }
+  }
+  
+  // Installment Methods
+  Future<String> createInstallmentTransactions({
+    required String categoryId,
+    required double totalAmount,
+    required int installmentMonths,
+    required DateTime startDate,
+    required String paymentMethod,
+    String? description,
+    String? merchant,
+  }) async {
+    final userId = currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+    
+    try {
+      // Format date string properly
+      final dateStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      
+      print('Creating installment with params:');
+      print('  user_id: $userId');
+      print('  category_id: $categoryId');
+      print('  total_amount: $totalAmount (type: ${totalAmount.runtimeType})');
+      print('  installment_months: $installmentMonths (type: ${installmentMonths.runtimeType})');
+      print('  start_date: $dateStr');
+      print('  payment_method: $paymentMethod');
+      print('  merchant: ${merchant ?? 'null'}');
+      print('  description: ${description ?? 'null'}');
+      
+      // Call RPC with properly formatted parameters
+      final response = await supabase.rpc('create_installment_transactions', params: {
+        'p_user_id': userId,
+        'p_category_id': categoryId,
+        'p_total_amount': totalAmount,
+        'p_installment_months': installmentMonths,
+        'p_start_date': dateStr,
+        'p_payment_method': paymentMethod,
+        'p_merchant': merchant ?? '',
+        'p_description': description ?? '',
+      });
+      
+      return response?.toString() ?? '';
+    } catch (e) {
+      print('Error creating installment transactions: $e');
+      rethrow;
+    }
+  }
+  
+  Future<bool> deleteInstallmentTransactions({
+    required String installmentId,
+  }) async {
+    final userId = currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+    
+    try {
+      final response = await supabase.rpc('delete_installment_transactions', params: {
+        'p_installment_id': installmentId,
+        'p_user_id': userId,
+      });
+      
+      return response as bool;
+    } catch (e) {
+      print('Error deleting installment transactions: $e');
+      rethrow;
+    }
+  }
+  
+  Future<List<Map<String, dynamic>>> getInstallmentSummary({
+    DateTime? month,
+  }) async {
+    final userId = currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+    
+    try {
+      final params = {
+        'p_user_id': userId,
+      };
+      
+      if (month != null) {
+        params['p_month'] = month.toIso8601String().split('T')[0];
+      }
+      
+      final response = await supabase.rpc('get_installment_summary', params: params);
+      
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      print('Error getting installment summary: $e');
       return [];
     }
   }

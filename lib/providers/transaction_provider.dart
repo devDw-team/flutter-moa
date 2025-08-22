@@ -65,6 +65,7 @@ class TransactionProvider extends ChangeNotifier {
     required DateTime date,
     String? description,
     String? merchant,
+    String? paymentMethod,
     List<String>? tags,
   }) async {
     try {
@@ -75,11 +76,41 @@ class TransactionProvider extends ChangeNotifier {
         date: date,
         description: description,
         merchant: merchant,
+        paymentMethod: paymentMethod,
         tags: tags,
       );
       
       // Reload transactions for the month
       await loadTransactions(date);
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+  
+  Future<void> createInstallmentTransactions({
+    required String categoryId,
+    required double totalAmount,
+    required int installmentMonths,
+    required DateTime startDate,
+    required String paymentMethod,
+    String? description,
+    String? merchant,
+  }) async {
+    try {
+      await _supabaseService.createInstallmentTransactions(
+        categoryId: categoryId,
+        totalAmount: totalAmount,
+        installmentMonths: installmentMonths,
+        startDate: startDate,
+        paymentMethod: paymentMethod,
+        description: description,
+        merchant: merchant,
+      );
+      
+      // Reload transactions for the month
+      await loadTransactions(startDate);
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -95,6 +126,7 @@ class TransactionProvider extends ChangeNotifier {
     DateTime? date,
     String? description,
     String? merchant,
+    String? paymentMethod,
     List<String>? tags,
   }) async {
     try {
@@ -110,6 +142,7 @@ class TransactionProvider extends ChangeNotifier {
         date: date,
         description: description,
         merchant: merchant,
+        paymentMethod: paymentMethod,
         tags: tags,
       );
       
@@ -139,6 +172,26 @@ class TransactionProvider extends ChangeNotifier {
       
       // Remove from local list
       _transactions.removeWhere((t) => t.id == transactionId);
+      
+      // Reload monthly summary for the affected month
+      _monthlySummary = await _supabaseService.getMonthlySummary(transactionDate);
+      
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+  
+  Future<void> deleteInstallmentTransactions(String installmentId, DateTime transactionDate) async {
+    try {
+      await _supabaseService.deleteInstallmentTransactions(
+        installmentId: installmentId,
+      );
+      
+      // Remove all transactions with this installment ID from local list
+      _transactions.removeWhere((t) => t.installmentId == installmentId);
       
       // Reload monthly summary for the affected month
       _monthlySummary = await _supabaseService.getMonthlySummary(transactionDate);

@@ -8,6 +8,9 @@ class Transaction {
   final String type; // 'income' or 'expense'
   final String? description;
   final String? merchant;
+  final String? paymentMethod; // 'card', 'transfer', 'cash'
+  final String? installmentId;
+  final int? installmentMonths;
   final DateTime transactionDate;
   final DateTime? transactionTime;
   final List<String>? tags;
@@ -28,6 +31,9 @@ class Transaction {
     required this.type,
     this.description,
     this.merchant,
+    this.paymentMethod,
+    this.installmentId,
+    this.installmentMonths,
     required this.transactionDate,
     this.transactionTime,
     this.tags,
@@ -48,6 +54,9 @@ class Transaction {
       type: json['type'],
       description: json['description'],
       merchant: json['merchant'],
+      paymentMethod: json['payment_method'],
+      installmentId: json['installment_id'],
+      installmentMonths: json['installment_months'],
       transactionDate: DateTime.parse(json['transaction_date']),
       transactionTime: json['transaction_time'] != null
           ? DateTime.parse('1970-01-01 ${json['transaction_time']}')
@@ -73,6 +82,9 @@ class Transaction {
       'type': type,
       'description': description,
       'merchant': merchant,
+      'payment_method': paymentMethod,
+      'installment_id': installmentId,
+      'installment_months': installmentMonths,
       'transaction_date': transactionDate.toIso8601String().split('T')[0],
       'transaction_time': transactionTime?.toIso8601String().split('T')[1],
       'tags': tags,
@@ -92,6 +104,9 @@ class Transaction {
     String? type,
     String? description,
     String? merchant,
+    String? paymentMethod,
+    String? installmentId,
+    int? installmentMonths,
     DateTime? transactionDate,
     DateTime? transactionTime,
     List<String>? tags,
@@ -110,6 +125,9 @@ class Transaction {
       type: type ?? this.type,
       description: description ?? this.description,
       merchant: merchant ?? this.merchant,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      installmentId: installmentId ?? this.installmentId,
+      installmentMonths: installmentMonths ?? this.installmentMonths,
       transactionDate: transactionDate ?? this.transactionDate,
       transactionTime: transactionTime ?? this.transactionTime,
       tags: tags ?? this.tags,
