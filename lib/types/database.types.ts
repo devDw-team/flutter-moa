@@ -225,6 +225,45 @@ export type Database = {
           },
         ]
       }
+      family_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       installments: {
         Row: {
           category_id: string
@@ -294,45 +333,6 @@ export type Database = {
           },
           {
             foreignKeyName: "installments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      family_members: {
-        Row: {
-          group_id: string
-          id: string
-          joined_at: string | null
-          role: string
-          user_id: string
-        }
-        Insert: {
-          group_id: string
-          id?: string
-          joined_at?: string | null
-          role: string
-          user_id: string
-        }
-        Update: {
-          group_id?: string
-          id?: string
-          joined_at?: string | null
-          role?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "family_members_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "family_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "family_members_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -428,6 +428,8 @@ export type Database = {
           amount: number
           category_id: string
           created_at: string | null
+          day_of_month: number | null
+          day_of_week: number | null
           description: string | null
           end_date: string | null
           family_group_id: string | null
@@ -435,7 +437,9 @@ export type Database = {
           id: string
           interval_value: number | null
           is_active: boolean | null
+          merchant: string | null
           next_date: string
+          payment_method: string | null
           start_date: string
           type: string
           updated_at: string | null
@@ -445,6 +449,8 @@ export type Database = {
           amount: number
           category_id: string
           created_at?: string | null
+          day_of_month?: number | null
+          day_of_week?: number | null
           description?: string | null
           end_date?: string | null
           family_group_id?: string | null
@@ -452,7 +458,9 @@ export type Database = {
           id?: string
           interval_value?: number | null
           is_active?: boolean | null
+          merchant?: string | null
           next_date: string
+          payment_method?: string | null
           start_date: string
           type: string
           updated_at?: string | null
@@ -462,6 +470,8 @@ export type Database = {
           amount?: number
           category_id?: string
           created_at?: string | null
+          day_of_month?: number | null
+          day_of_week?: number | null
           description?: string | null
           end_date?: string | null
           family_group_id?: string | null
@@ -469,7 +479,9 @@ export type Database = {
           id?: string
           interval_value?: number | null
           is_active?: boolean | null
+          merchant?: string | null
           next_date?: string
+          payment_method?: string | null
           start_date?: string
           type?: string
           updated_at?: string | null
@@ -743,8 +755,8 @@ export type Database = {
       calculate_budget_usage: {
         Args: { budget_id: string }
         Returns: {
-          used_amount: number
           usage_percentage: number
+          used_amount: number
         }[]
       }
       check_budget_alerts: {
@@ -755,32 +767,16 @@ export type Database = {
         Args: { months_to_keep?: number }
         Returns: number
       }
-      get_transaction_stats: {
-        Args: { p_user_id: string; p_start_date?: string; p_end_date?: string }
-        Returns: {
-          total_income: number
-          total_expense: number
-          net_amount: number
-          transaction_count: number
-          average_transaction: number
-          top_expense_category: string
-          top_expense_amount: number
-        }[]
-      }
-      process_recurring_transactions: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
       create_installment_transactions: {
         Args: {
-          p_user_id: string
           p_category_id: string
-          p_total_amount: number
+          p_description: string
           p_installment_months: number
-          p_start_date: string
+          p_merchant: string
           p_payment_method: string
-          p_merchant?: string
-          p_description?: string
+          p_start_date: string
+          p_total_amount: number
+          p_user_id: string
         }
         Returns: string
       }
@@ -789,15 +785,15 @@ export type Database = {
         Returns: boolean
       }
       get_installment_summary: {
-        Args: { p_user_id: string; p_month?: string }
+        Args: { p_month?: string; p_user_id: string }
         Returns: {
+          current_month: number
           installment_id: string
           merchant: string
-          total_amount: number
           monthly_amount: number
-          current_month: number
-          total_months: number
           remaining_amount: number
+          total_amount: number
+          total_months: number
         }[]
       }
       get_system_categories: {
@@ -817,6 +813,26 @@ export type Database = {
           user_id: string | null
         }[]
       }
+      get_transaction_stats: {
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
+        Returns: {
+          average_transaction: number
+          net_amount: number
+          top_expense_amount: number
+          top_expense_category: string
+          total_expense: number
+          total_income: number
+          transaction_count: number
+        }[]
+      }
+      process_recurring_transactions: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      process_recurring_transactions_for_date: {
+        Args: { p_date: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
@@ -829,7 +845,7 @@ export type Database = {
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof DatabaseWithoutInternals, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
@@ -841,7 +857,9 @@ export type Tables<
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
@@ -867,7 +885,9 @@ export type TablesInsert<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
@@ -890,7 +910,9 @@ export type TablesUpdate<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
@@ -913,7 +935,9 @@ export type Enums<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
@@ -928,7 +952,9 @@ export type CompositeTypes<
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]

@@ -765,4 +765,255 @@ class SupabaseService {
       rethrow;
     }
   }
+  
+  // Recurring Transaction Methods
+  Future<List<Map<String, dynamic>>> getRecurringTransactions() async {
+    final userId = currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+    
+    try {
+      final response = await supabase
+          .from('recurring_transactions')
+          .select('*, categories(*)')
+          .eq('user_id', userId)
+          .order('next_date', ascending: true);
+      
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      print('Error getting recurring transactions: $e');
+      return [];
+    }
+  }
+  
+  Future<void> addRecurringTransaction({
+    required String categoryId,
+    required double amount,
+    required String type,
+    required String frequency,
+    required DateTime startDate,
+    int intervalValue = 1,
+    int? dayOfMonth,
+    int? dayOfWeek,
+    DateTime? endDate,
+    String? description,
+    String? merchant,
+    String? paymentMethod,
+  }) async {
+    final userId = currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+    
+    try {
+      // Calculate next_date based on frequency and parameters
+      DateTime nextDate = startDate;
+      final now = DateTime.now();
+      
+      if (frequency == 'monthly' && dayOfMonth != null) {
+        if (dayOfMonth == 99) {
+          // Last day of month
+          nextDate = DateTime(startDate.year, startDate.month + 1, 0);
+          // If the calculated date is in the past, move to next month
+          while (nextDate.isBefore(now)) {
+            nextDate = DateTime(nextDate.year, nextDate.month + 2, 0);
+          }
+        } else {
+          // Specific day of month
+          nextDate = DateTime(startDate.year, startDate.month, dayOfMonth);
+          // Handle if the day doesn't exist in the month
+          if (nextDate.day != dayOfMonth) {
+            nextDate = DateTime(startDate.year, startDate.month + 1, 0);
+          }
+          // If the calculated date is in the past, move to next month
+          while (nextDate.isBefore(now)) {
+            final nextMonth = nextDate.month == 12 ? 1 : nextDate.month + 1;
+            final nextYear = nextDate.month == 12 ? nextDate.year + 1 : nextDate.year;
+            nextDate = DateTime(nextYear, nextMonth, dayOfMonth);
+            // Handle if the day doesn't exist in the next month
+            if (nextDate.day != dayOfMonth) {
+              nextDate = DateTime(nextYear, nextMonth + 1, 0);
+            }
+          }
+        }
+      } else if (frequency == 'weekly' && dayOfWeek != null) {
+        // Find next occurrence of the specified weekday
+        while (nextDate.weekday != dayOfWeek % 7 || nextDate.isBefore(now)) {
+          nextDate = nextDate.add(const Duration(days: 1));
+        }
+      } else if (frequency == 'daily') {
+        // For daily frequency, ensure next date is not in the past
+        while (nextDate.isBefore(now)) {
+          nextDate = nextDate.add(Duration(days: intervalValue));
+        }
+      } else if (frequency == 'yearly') {
+        // For yearly frequency, ensure next date is not in the past
+        while (nextDate.isBefore(now)) {
+          nextDate = DateTime(nextDate.year + intervalValue, nextDate.month, nextDate.day);
+        }
+      }
+      
+      await supabase.from('recurring_transactions').insert({
+        'user_id': userId,
+        'category_id': categoryId,
+        'amount': amount,
+        'type': type,
+        'frequency': frequency,
+        'interval_value': intervalValue,
+        'start_date': startDate.toIso8601String().split('T')[0],
+        'end_date': endDate?.toIso8601String().split('T')[0],
+        'next_date': nextDate.toIso8601String().split('T')[0],
+        'day_of_month': dayOfMonth,
+        'day_of_week': dayOfWeek,
+        'description': description,
+        'merchant': merchant,
+        'payment_method': paymentMethod,
+        'is_active': true,
+      });
+    } catch (e) {
+      print('Error adding recurring transaction: $e');
+      rethrow;
+    }
+  }
+  
+  Future<void> updateRecurringTransaction({
+    required String id,
+    String? categoryId,
+    double? amount,
+    String? type,
+    String? frequency,
+    DateTime? startDate,
+    int? intervalValue,
+    int? dayOfMonth,
+    int? dayOfWeek,
+    DateTime? endDate,
+    bool? isActive,
+    String? description,
+    String? merchant,
+    String? paymentMethod,
+  }) async {
+    final userId = currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+    
+    try {
+      final updateData = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      
+      if (categoryId != null) updateData['category_id'] = categoryId;
+      if (amount != null) updateData['amount'] = amount;
+      if (type != null) updateData['type'] = type;
+      if (frequency != null) updateData['frequency'] = frequency;
+      if (intervalValue != null) updateData['interval_value'] = intervalValue;
+      if (dayOfMonth != null) updateData['day_of_month'] = dayOfMonth;
+      if (dayOfWeek != null) updateData['day_of_week'] = dayOfWeek;
+      if (startDate != null) updateData['start_date'] = startDate.toIso8601String().split('T')[0];
+      if (endDate != null) updateData['end_date'] = endDate.toIso8601String().split('T')[0];
+      if (isActive != null) updateData['is_active'] = isActive;
+      if (description != null) updateData['description'] = description;
+      if (merchant != null) updateData['merchant'] = merchant;
+      if (paymentMethod != null) updateData['payment_method'] = paymentMethod;
+      
+      // If frequency, startDate, dayOfMonth, or dayOfWeek changed, recalculate next_date
+      if (frequency != null || startDate != null || dayOfMonth != null || dayOfWeek != null || intervalValue != null) {
+        // Fetch current data to fill in missing values
+        final currentData = await supabase
+            .from('recurring_transactions')
+            .select()
+            .eq('id', id)
+            .eq('user_id', userId)
+            .single();
+        
+        final actualFrequency = frequency ?? currentData['frequency'] as String;
+        final actualStartDate = startDate ?? DateTime.parse(currentData['start_date']);
+        final actualIntervalValue = intervalValue ?? currentData['interval_value'] as int;
+        final actualDayOfMonth = dayOfMonth ?? currentData['day_of_month'] as int?;
+        final actualDayOfWeek = dayOfWeek ?? currentData['day_of_week'] as int?;
+        
+        // Calculate next_date
+        DateTime nextDate = actualStartDate;
+        final now = DateTime.now();
+        
+        if (actualFrequency == 'monthly' && actualDayOfMonth != null) {
+          if (actualDayOfMonth == 99) {
+            // Last day of month
+            nextDate = DateTime(actualStartDate.year, actualStartDate.month + 1, 0);
+            // If the calculated date is in the past, move to next month
+            while (nextDate.isBefore(now)) {
+              nextDate = DateTime(nextDate.year, nextDate.month + 2, 0);
+            }
+          } else {
+            // Specific day of month
+            nextDate = DateTime(actualStartDate.year, actualStartDate.month, actualDayOfMonth);
+            // Handle if the day doesn't exist in the month
+            if (nextDate.day != actualDayOfMonth) {
+              nextDate = DateTime(actualStartDate.year, actualStartDate.month + 1, 0);
+            }
+            // If the calculated date is in the past, move to next month
+            while (nextDate.isBefore(now)) {
+              final nextMonth = nextDate.month == 12 ? 1 : nextDate.month + 1;
+              final nextYear = nextDate.month == 12 ? nextDate.year + 1 : nextDate.year;
+              nextDate = DateTime(nextYear, nextMonth, actualDayOfMonth);
+              // Handle if the day doesn't exist in the next month
+              if (nextDate.day != actualDayOfMonth) {
+                nextDate = DateTime(nextYear, nextMonth + 1, 0);
+              }
+            }
+          }
+        } else if (actualFrequency == 'weekly' && actualDayOfWeek != null) {
+          // Find next occurrence of the specified weekday
+          while (nextDate.weekday != actualDayOfWeek % 7 || nextDate.isBefore(now)) {
+            nextDate = nextDate.add(const Duration(days: 1));
+          }
+        } else if (actualFrequency == 'daily') {
+          // For daily frequency, ensure next date is not in the past
+          while (nextDate.isBefore(now)) {
+            nextDate = nextDate.add(Duration(days: actualIntervalValue));
+          }
+        } else if (actualFrequency == 'yearly') {
+          // For yearly frequency, ensure next date is not in the past
+          while (nextDate.isBefore(now)) {
+            nextDate = DateTime(nextDate.year + actualIntervalValue, nextDate.month, nextDate.day);
+          }
+        }
+        
+        updateData['next_date'] = nextDate.toIso8601String().split('T')[0];
+      }
+      
+      await supabase
+          .from('recurring_transactions')
+          .update(updateData)
+          .eq('id', id)
+          .eq('user_id', userId);
+    } catch (e) {
+      print('Error updating recurring transaction: $e');
+      rethrow;
+    }
+  }
+  
+  Future<void> deleteRecurringTransaction(String id) async {
+    final userId = currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+    
+    try {
+      await supabase
+          .from('recurring_transactions')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', userId);
+    } catch (e) {
+      print('Error deleting recurring transaction: $e');
+      rethrow;
+    }
+  }
+  
+  Future<int> processRecurringTransactions() async {
+    try {
+      final response = await supabase.rpc('process_recurring_transactions_for_date', params: {
+        'p_date': DateTime.now().toIso8601String().split('T')[0],
+      });
+      
+      return response as int;
+    } catch (e) {
+      print('Error processing recurring transactions: $e');
+      return 0;
+    }
+  }
 }

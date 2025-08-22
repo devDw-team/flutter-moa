@@ -5,6 +5,7 @@ import '../services/supabase_service.dart';
 import 'profile_edit_screen.dart';
 import 'password_verification_screen.dart';
 import 'account_verification_screen.dart';
+import 'recurring_transactions_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -117,6 +118,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const AccountVerificationScreen(),
+                ),
+              );
+            },
+          ),
+          
+          ListTile(
+            leading: const Icon(Icons.repeat),
+            title: const Text('반복 지출 관리'),
+            subtitle: const Text('정기적으로 발생하는 수입/지출을 관리합니다'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const RecurringTransactionsScreen(),
                 ),
               );
             },

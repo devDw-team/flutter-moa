@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'providers/auth_provider.dart';
 import 'providers/transaction_provider.dart';
+import 'providers/recurring_transaction_provider.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -35,6 +36,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => TransactionProvider()),
+        ChangeNotifierProvider(create: (_) => RecurringTransactionProvider()),
       ],
       child: MaterialApp(
         title: '모아 Lite',
